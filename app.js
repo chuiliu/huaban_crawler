@@ -1,17 +1,30 @@
-var http = require('http');
-var fs = require('fs');
-var async = require('async');
+var http = require('http'),
+    fs = require('fs'),
+    async = require('async');
 
-
-// var url = 'http://huaban.com/boards/25498000/?iwlq03e8&max=780917693&limit=1&wfl=1';  // 宫崎骏
-var url = 'http://huaban.com/boards/16135147/?ip3ceizv&max=&limit=20&wfl=1';
-var imageUrlBase = 'http://img.hb.aicdn.com/';
-var downloadPath = 'download/';
+var url = 'http://huaban.com/boards/155643/?ip44g0nc&max=&limit=20&wfl=1',
+    imageUrlBase = 'http://img.hb.aicdn.com/',
+    downloadPath = 'download/';
 
 // 保存所有图片
-var images = [];
+var images = [],
+// 图片类型
+    imagesTypes = {
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/bmp': '.bmp',
+    'image/gif': '.gif',
+    'image/x-icon': '.ico',
+    'image/tiff': '.tif',
+    'image/vnd.wap.wbmp': '.wbmp'
+};
 
-// 获取花瓣网数据
+/**
+ * 获取花瓣网数据
+ * @param  {[type]}   url      [description]
+ * @param  {Function} callback [description]
+ * @return {[type]}            [description]
+ */
 var fetchData = function(url, callback) {
     console.log('开始抓取花瓣网图片地址');
 
@@ -25,26 +38,20 @@ var fetchData = function(url, callback) {
 
         res.on('end', function() {
             // 取到画板数据
-            var board = /(app\.page\["board"\]).*};/.exec(html)[0];
-            board = board.substring(17, board.length - 1).trim().substring(1);
-            board = JSON.parse(board);
+            var board = getBoardObj(html);
 
             var pins = board.pins;
             images = images.concat(pins);
-            console.log('最后一张的id', images[images.length - 1].pin_id);
-            console.log('此时images长度', images.length);
 
-            // 画板照片数量
+            // 画板图片总数量
             var count = board.pin_count;
-            // console.log('画板照片总数量: ' + count);
             console.log('已抓取到' + board.pins.length + '张图片的地址');
 
             if (images.length == count || pins.length == 0) {
-                // 不应该再继续抓取了
+                // 停止抓取
                 console.log('抓取结束，即将下载' + images.length + '张图片');
                 callback && callback();
                 return;
-
             } else {
                 // 加载更多
                 loadMore(url);
@@ -53,56 +60,69 @@ var fetchData = function(url, callback) {
     }).on('error', function() {
         console.log('error');
     });
-
 };
 
 
+/**
+ * 取到画板数据
+ * @return {[type]} [description]
+ */
+var getBoardObj = function(html) {
+    var board = /(app\.page\["board"\]).*};/.exec(html)[0];
+    board = board.substring(17, board.length - 1).trim().substring(1);
+
+    return JSON.parse(board);
+};
+
+
+/**
+ * 加载更多
+ * @param  {[type]} url [当前url]
+ * @return {[type]}     [description]
+ */
 var loadMore = function(url) {
     var nextUrl = url.replace(/max=\d*&/, 'max=' + images[images.length - 1].pin_id + '&');
-    console.log('下一个地址', nextUrl);
-    fetchData(nextUrl, todo);
+    fetchData(nextUrl, downloadAll);
 };
 
 
-var todo = function() {
-    // 创建文件夹，文件夹名为画板ID
+var downloadAll = function() {
+    // 创建名为画板ID的文件夹
     downloadPath += images[0].board_id + '/';
     if(!fs.existsSync(downloadPath)) {
          fs.mkdirSync(downloadPath);
     }
 
-    async.mapLimit(images, 3, function(item, callback) {
-
-        var imgUrl =  imageUrlBase + item.file.key;
-        var types = {
-            'image/png': '.png',
-            'image/jpeg': '.jpg',
-            'image/bmp': '.bmp',
-            'image/gif': '.gif',
-            'image/x-icon': '.ico',
-            'image/tiff': '.tif',
-            'image/vnd.wap.wbmp': '.wbmp'
-        };
-        // console.log(item.file.type);
-        var filename = item.file.id + (types[item.file.type] || '.jpg');
-
-        download(imgUrl, filename, callback);
+    async.mapLimit(images, 3, function(image, callback) {
+        // 下载
+        download(image, callback);
     }, function (err, result) {
-        console.log('完成情况：' + result);
+        console.log('下载完成情况：' + result);
     });
 };
 
 
-// 下载
-var download = function(imgUrl, filename, callback) {
+/**
+ * 下载图片
+ * @param  {[type]}   image    [description]
+ * @param  {Function} callback [description]
+ * @return {[type]}            [description]
+ */
+var downloadCount = 0;
+var download = function(image, callback) {
+
+    var imgUrl =  imageUrlBase + image.file.key;
+    var filename = image.file.id + (imagesTypes[image.file.type] || '.jpg');
     var filePath = downloadPath + filename;
+
     if (fs.existsSync(filePath)) {
-        console.log('图片 ' + filePath + ' 已存在');
+        console.log('图片 ', filePath, ' 已存在');
+        ++downloadCount;
         callback(null, '图片已存在');
     } else {
         var ws = fs.createWriteStream(filePath);
         ws.on('finish', function() {
-            console.log('' + filename + ' 已下载');
+            console.log('' , filename, ' 已下载，总下载进度', 100 * (++downloadCount / images.length).toFixed(2), '%');
             callback(null, filename + '下载成功');
         });
 
@@ -118,4 +138,5 @@ var download = function(imgUrl, filename, callback) {
 
 
 
-fetchData(url, todo);
+// begin
+fetchData(url, downloadAll);
