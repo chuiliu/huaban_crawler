@@ -3,7 +3,7 @@ var http = require('http'),
     async = require('async');
 
 // 画板ID
-var boardId = '16135155';
+var boardId = '155643';
 var url = 'http://huaban.com/boards/' + boardId + '/?ip44g0nc&max=&limit=20&wfl=1';
 
 
