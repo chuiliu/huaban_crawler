@@ -2,22 +2,27 @@ var http = require('http'),
     fs = require('fs'),
     async = require('async');
 
-var url = 'http://huaban.com/boards/155643/?ip44g0nc&max=&limit=20&wfl=1',
-    imageUrlBase = 'http://img.hb.aicdn.com/',
-    downloadPath = 'download/';
+// 画板ID
+var boardId = '16135155';
+var url = 'http://huaban.com/boards/' + boardId + '/?ip44g0nc&max=&limit=20&wfl=1';
 
+
+var imageUrlBase = 'http://img.hb.aicdn.com/',
+// 下载本地路径
+    downloadPath = 'download/',
 // 保存所有图片
-var images = [],
+    images = [],
 // 图片类型
     imagesTypes = {
-    'image/png': '.png',
-    'image/jpeg': '.jpg',
-    'image/bmp': '.bmp',
-    'image/gif': '.gif',
-    'image/x-icon': '.ico',
-    'image/tiff': '.tif',
-    'image/vnd.wap.wbmp': '.wbmp'
-};
+        'image/png': '.png',
+        'image/jpeg': '.jpg',
+        'image/bmp': '.bmp',
+        'image/gif': '.gif',
+        'image/x-icon': '.ico',
+        'image/tiff': '.tif',
+        'image/vnd.wap.wbmp': '.wbmp'
+    };
+
 
 /**
  * 获取花瓣网数据
