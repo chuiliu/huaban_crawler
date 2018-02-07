@@ -1,18 +1,18 @@
 var http = require('http'),
     fs = require('fs'),
+    path = require('path'),
     async = require('async');
 
 // 画板ID
-var boardId = '155643';
+var boardId = '155643';  // 155643  // 1282062
 var url = 'http://huaban.com/boards/' + boardId + '/?ip44g0nc&max=&limit=20&wfl=1';
 
-
-var imageUrlBase = 'http://img.hb.aicdn.com/',
-// 下载本地路径
+var imageBaseUrl = 'http://img.hb.aicdn.com/',
+    // 下载本地路径
     downloadPath = 'download/',
-// 保存所有图片
+    // 保存所有图片
     images = [],
-// 图片类型
+    // 图片类型
     imagesTypes = {
         'image/png': '.png',
         'image/jpeg': '.jpg',
@@ -22,7 +22,6 @@ var imageUrlBase = 'http://img.hb.aicdn.com/',
         'image/tiff': '.tif',
         'image/vnd.wap.wbmp': '.wbmp'
     };
-
 
 /**
  * 获取花瓣网数据
@@ -67,7 +66,6 @@ var fetchData = function(url, callback) {
     });
 };
 
-
 /**
  * 取到画板数据
  * @return {[type]} [description]
@@ -79,7 +77,6 @@ var getBoardObj = function(html) {
     return JSON.parse(board);
 };
 
-
 /**
  * 加载更多
  * @param  {[type]} url [当前url]
@@ -90,13 +87,10 @@ var loadMore = function(url) {
     fetchData(nextUrl, downloadAll);
 };
 
-
 var downloadAll = function() {
     // 创建名为画板ID的文件夹
     downloadPath += images[0].board_id + '/';
-    if(!fs.existsSync(downloadPath)) {
-         fs.mkdirSync(downloadPath);
-    }
+    mkdirsSync(downloadPath);
 
     async.mapLimit(images, 3, function(image, callback) {
         // 下载
@@ -105,7 +99,6 @@ var downloadAll = function() {
         console.log('下载完成情况：' + result);
     });
 };
-
 
 /**
  * 下载图片
@@ -116,7 +109,7 @@ var downloadAll = function() {
 var downloadCount = 0;
 var download = function(image, callback) {
 
-    var imgUrl =  imageUrlBase + image.file.key;
+    var imgUrl =  imageBaseUrl + image.file.key;
     var filename = image.file.id + (imagesTypes[image.file.type] || '.jpg');
     var filePath = downloadPath + filename;
 
@@ -141,7 +134,13 @@ var download = function(image, callback) {
     }
 };
 
+function mkdirsSync(dirname) {
+    if (fs.existsSync(dirname)) {
+        return true;
+    } else if (mkdirsSync(path.dirname(dirname))) {
+        fs.mkdirSync(dirname);
+        return true;
+    }
+}
 
-
-// begin
 fetchData(url, downloadAll);
